@@ -354,9 +354,9 @@ This is the very popular, low cost, very low power RF transceiver from Nordic Se
 </plain>
 <instances>
 <instance part="IC1" gate="G$1" x="-7.62" y="38.1"/>
-<instance part="U3" gate="G$1" x="68.58" y="38.1" smashed="yes">
-<attribute name="NAME" x="50.8" y="51.562" size="1.6764" layer="95"/>
-<attribute name="VALUE" x="73.406" y="51.816" size="1.6764" layer="96"/>
+<instance part="U3" gate="G$1" x="76.2" y="38.1" smashed="yes">
+<attribute name="NAME" x="58.42" y="51.562" size="1.6764" layer="95"/>
+<attribute name="VALUE" x="81.026" y="51.816" size="1.6764" layer="96"/>
 </instance>
 </instances>
 <busses>
@@ -365,7 +365,7 @@ This is the very popular, low cost, very low power RF transceiver from Nordic Se
 <net name="N$1" class="0">
 <segment>
 <pinref part="U3" gate="G$1" pin="CE"/>
-<wire x1="45.72" y1="45.72" x2="33.02" y2="45.72" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="45.72" x2="33.02" y2="45.72" width="0.1524" layer="91"/>
 <wire x1="33.02" y1="45.72" x2="33.02" y2="17.78" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="PB1(OC1A)"/>
 <wire x1="33.02" y1="17.78" x2="17.78" y2="17.78" width="0.1524" layer="91"/>
@@ -374,7 +374,7 @@ This is the very popular, low cost, very low power RF transceiver from Nordic Se
 <net name="N$2" class="0">
 <segment>
 <pinref part="U3" gate="G$1" pin="CSN"/>
-<wire x1="45.72" y1="43.18" x2="35.56" y2="43.18" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="43.18" x2="35.56" y2="43.18" width="0.1524" layer="91"/>
 <wire x1="35.56" y1="43.18" x2="35.56" y2="15.24" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="PB2(SS/OC1B)"/>
 <wire x1="35.56" y1="15.24" x2="17.78" y2="15.24" width="0.1524" layer="91"/>
@@ -383,7 +383,7 @@ This is the very popular, low cost, very low power RF transceiver from Nordic Se
 <net name="N$3" class="0">
 <segment>
 <pinref part="U3" gate="G$1" pin="SCK"/>
-<wire x1="45.72" y1="40.64" x2="38.1" y2="40.64" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="40.64" x2="38.1" y2="40.64" width="0.1524" layer="91"/>
 <wire x1="38.1" y1="40.64" x2="38.1" y2="7.62" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="PB5(SCK)"/>
 <wire x1="38.1" y1="7.62" x2="17.78" y2="7.62" width="0.1524" layer="91"/>
@@ -392,7 +392,7 @@ This is the very popular, low cost, very low power RF transceiver from Nordic Se
 <net name="N$4" class="0">
 <segment>
 <pinref part="U3" gate="G$1" pin="MOSI"/>
-<wire x1="45.72" y1="38.1" x2="40.64" y2="38.1" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="38.1" x2="40.64" y2="38.1" width="0.1524" layer="91"/>
 <wire x1="40.64" y1="38.1" x2="40.64" y2="12.7" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="PB3(MOSI/OC2)"/>
 <wire x1="40.64" y1="12.7" x2="17.78" y2="12.7" width="0.1524" layer="91"/>
@@ -401,7 +401,7 @@ This is the very popular, low cost, very low power RF transceiver from Nordic Se
 <net name="N$5" class="0">
 <segment>
 <pinref part="U3" gate="G$1" pin="MISO"/>
-<wire x1="45.72" y1="35.56" x2="43.18" y2="35.56" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="35.56" x2="43.18" y2="35.56" width="0.1524" layer="91"/>
 <wire x1="43.18" y1="35.56" x2="43.18" y2="10.16" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="PB4(MISO)"/>
 <wire x1="43.18" y1="10.16" x2="17.78" y2="10.16" width="0.1524" layer="91"/>
