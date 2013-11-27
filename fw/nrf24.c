@@ -141,6 +141,17 @@ static UI8 ReadStatus ()
    SpiSendRecv(g_nSsPin, pbSendRecv, 1, pbSendRecv, 1);
    return pbSendRecv[0];
 }
+//-----------< FUNCTION: ReadWriteStatus >-----------------------------------
+// Purpose:    reads and writes the NRF24 status register
+// Parameters: fStatus - the status to assign
+// Returns:    the previous contents of the status register
+//---------------------------------------------------------------------------
+static UI8 ReadWriteStatus (UI8 fStatus)
+{
+   BYTE pbSendRecv[2] = { COMMAND_WRITEREGISTER | REGISTER_STATUS, fStatus };
+   SpiSendRecv(g_nSsPin, pbSendRecv, 2, pbSendRecv, 1);
+   return pbSendRecv[0];
+}
 //-----------< FUNCTION: Nrf24Init >----------------------------------------
 // Purpose:    NRF24 interface initialization
 // Parameters: pConfig - module configuration
@@ -184,7 +195,7 @@ VOID Nrf24Init (PNRF24_CONFIG pConfig)
    Nrf24ClearIrq(NRF24_IRQ_ALL);
    Nrf24FlushSend();
    Nrf24FlushRecv();
-}
+ }
 //-----------< FUNCTION: Nrf24GetIrqMask >-----------------------------------
 // Purpose:    gets the currently masked IRQs from the CONFIG register
 // Parameters: none
@@ -334,7 +345,7 @@ VOID Nrf24SetRetryCount (UI8 nCount)
 //-----------< FUNCTION: Nrf24GetRFChannel >---------------------------------
 // Purpose:    gets the RF_CH register
 // Parameters: none
-// Returns:    current RF channel, in mHz over 2.4gHz
+// Returns:    current RF channel, in MHz over 2.4gHz
 //---------------------------------------------------------------------------
 UI8 Nrf24GetRFChannel ()
 {
@@ -342,12 +353,11 @@ UI8 Nrf24GetRFChannel ()
 }
 //-----------< FUNCTION: Nrf24SetRFChannel >---------------------------------
 // Purpose:    sets the RF_CH register
-// Parameters: nChannel - current RF channel, in mHz over 2.4gHz
+// Parameters: nChannel - current RF channel, in MHz over 2.4gHz
 // Returns:    none
 //---------------------------------------------------------------------------
 VOID Nrf24SetRFChannel (UI8 nChannel)
 {
-   // TODO: trace on validation failures
    if (nChannel < 84)
       WriteRegister8(REGISTER_RFCHANNEL, nChannel);
 }
@@ -631,11 +641,11 @@ VOID Nrf24SetFeatures (UI8 fFeatures)
 //-----------< FUNCTION: Nrf24ClearIrq >-------------------------------------
 // Purpose:    clears interrupts currently set
 // Parameters: fIrq - bitmask of interrupts to clear
-// Returns:    none
+// Returns:    interrupts that were previously set
 //---------------------------------------------------------------------------
-VOID Nrf24ClearIrq (UI8 fIrq)
+UI8 Nrf24ClearIrq (UI8 fIrq)
 {
-   WriteRegister8(REGISTER_STATUS, fIrq & NRF24_IRQ_ALL);
+   return ReadWriteStatus(fIrq & NRF24_IRQ_ALL) & NRF24_IRQ_ALL;
 }
 //-----------< FUNCTION: Nrf24FlushSend >------------------------------------
 // Purpose:    empties the transceiver's TX FIFO
@@ -662,13 +672,32 @@ VOID Nrf24FlushRecv ()
 //---------------------------------------------------------------------------
 VOID Nrf24PowerOn (UI8 fMode)
 {
-   if (fMode == NRF24_MODE_SEND || fMode == NRF24_MODE_RECV)
+   if (fMode != g_fPowerMode)
    {
+      switch (g_fPowerMode)
+      {
+         case NRF24_MODE_SEND:
+            // if switching from send to receive, wait for packets to be sent
+            PinSetHi(g_nCePin);
+            while (!(Nrf24GetFifoStatus() & NRF24_FIFO_TX_EMPTY))
+               ;
+            PinSetLo(g_nCePin);
+            break;
+         case NRF24_MODE_RECV:
+            // if switching from receive to send, clear CE
+            PinSetLo(g_nCePin);
+            Nrf24FlushRecv();
+            break;
+      }
+      Nrf24ClearIrq(NRF24_IRQ_ALL);
       WriteRegister8(
          REGISTER_CONFIG,
          (ReadRegister8(REGISTER_CONFIG) & ~0x3) | (0x2) | (fMode & 0x1)
       );
       g_fPowerMode = fMode;
+      // if receiving, set CE high to enable incoming packets
+      if (fMode == NRF24_MODE_RECV)
+         PinSetHi(g_nCePin);
    }
 }
 //-----------< FUNCTION: Nrf24PowerOff >-------------------------------------
@@ -678,33 +707,88 @@ VOID Nrf24PowerOn (UI8 fMode)
 //---------------------------------------------------------------------------
 VOID Nrf24PowerOff ()
 {
+   PinSetLo(g_nCePin);
    g_fPowerMode = NRF24_MODE_OFF;
    WriteRegister8(
       REGISTER_CONFIG,
       ReadRegister8(REGISTER_CONFIG) & ~0x3
    );
 }
-//-----------< FUNCTION: Nrf24Send >-----------------------------------------
-// Purpose:    transmits a packet
+//-----------< FUNCTION: Nrf24BeginSend >------------------------------------
+// Purpose:    transmits a data packet asynchronously
 // Parameters: pvPacket - packet to transfer
 //             cbPacket - number of bytes to transfer
 // Returns:    none
 //---------------------------------------------------------------------------
-VOID Nrf24Send (PCVOID pvPacket, BSIZE cbPacket)
+VOID Nrf24BeginSend (PCVOID pvPacket, BSIZE cbPacket)
 {
-   // TODO: trace failure
    if (g_fPowerMode == NRF24_MODE_SEND)
    {
-      // set CE high to move the transciever out of standby
-      PinSetHi(g_nCePin);
+      // ensure no other transfers are in progress
+      SpiWait();
       // clock in the command and data buffer
       UI8  cbSend = cbPacket + 1;
       BYTE pbSend[cbSend];
       pbSend[0] = g_bTXRecvAck ? COMMAND_TXWRITEPACKET : COMMAND_TXWRITENOACK;
-      memcpy(pbSend + 1, pvPacket, MIN(cbPacket, NRF24_PACKET_MAX));
+      memcpy(pbSend + 1, pvPacket, Min(cbPacket, NRF24_PACKET_MAX));
       SpiSend(g_nSsPin, pbSend, cbSend);
+      // set CE high to take the transceiver out of standby
+      PinSetHi(g_nCePin);
+   }
+}
+//-----------< FUNCTION: Nrf24EndSend >--------------------------------------
+// Purpose:    waits for an async packet transmission to complete
+// Parameters: none
+// Returns:    none
+//---------------------------------------------------------------------------
+VOID Nrf24EndSend ()
+{
+   if (g_fPowerMode == NRF24_MODE_SEND)
+   {
       SpiWait();
       // set CE low to return to standby after the transfer
       PinSetLo(g_nCePin);
    }
+}
+//-----------< FUNCTION: Nrf24BeginRecv >------------------------------------
+// Purpose:    begins an async packet receive operation
+// Parameters: cbPacket - number of bytes to receive
+// Returns:    none
+//---------------------------------------------------------------------------
+VOID Nrf24BeginRecv (BSIZE cbPacket)
+{
+   if (g_fPowerMode == NRF24_MODE_RECV)
+   {
+      // ensure no other transfers are in progress
+      SpiWait();
+      // clock in the command buffer
+      UI8  cbSend   = 1;
+      BYTE pbSend[] = { COMMAND_RXREADPACKET };
+      SpiBeginSendRecv(
+         g_nSsPin, 
+         pbSend, 
+         cbSend, 
+         Min(cbPacket, NRF24_PACKET_MAX) + 1, 
+         NULL
+      );
+   }
+}
+//-----------< FUNCTION: Nrf24EndRecv >--------------------------------------
+// Purpose:    completes an async packet receive operation
+// Parameters: pvPacket - return the packet via here
+//             cbPacket - number of bytes to receive
+// Returns:    pvPacket if a packet was received
+//             NULL otherwise
+//---------------------------------------------------------------------------
+PVOID Nrf24EndRecv (PVOID pvPacket, BSIZE cbPacket)
+{
+   if (g_fPowerMode == NRF24_MODE_RECV)
+   {
+      UI8  cbRecv = Min(cbPacket, NRF24_PACKET_MAX) + 1;
+      BYTE pbRecv[cbRecv];
+      SpiEndSendRecv(pbRecv, cbRecv);
+      memcpy(pvPacket, pbRecv + 1, cbPacket);
+      return pvPacket;
+   }
+   return NULL;
 }

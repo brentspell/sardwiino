@@ -43,16 +43,23 @@ typedef int32_t               I32;
 typedef uint32_t              UI32;
 #define I8_MIN                INT8_MIN
 #define I8_MAX                INT8_MAX
-#define UI8_MIN               UINT8_MIN
+#define UI8_MIN               0
 #define UI8_MAX               UINT8_MAX
 #define I16_MIN               INT16_MIN
 #define I16_MAX               INT16_MAX
-#define UI16_MIN              UINT16_MIN
+#define UI16_MIN              0
 #define UI16_MAX              UINT16_MAX
 #define I32_MIN               INT32_MIN
 #define I32_MAX               INT32_MAX
-#define UI32_MIN              UINT32_MIN
+#define UI32_MIN              0
 #define UI32_MAX              UINT32_MAX
+//===========================================================================
+// FLOATING POINT TYPES
+//===========================================================================
+typedef float                 F32;
+#define F32_MIN               FLT_MIN
+#define F32_MAX               FLT_MAX
+#define F32_EPSILON           FLT_EPSILON
 //===========================================================================
 // BOOLEAN TYPES
 //===========================================================================
@@ -65,6 +72,9 @@ typedef BOOL                  BIT;
 #define BitMask(b)            (1 << (b))
 #define BitUnmask(b)          (~BitMask(b))
 #define BitTest(v, b)         (((v) & BitMask(b)) ? BIT_HI : BIT_LO)
+#define BitSetHi(v, b)        ((v) | BitMask(b))
+#define BitSetLo(v, b)        ((v) & BitUnmask(b))
+#define BitSet(v, b, t)       ((t) ? BitSetHi(v, b) : BitSetLo(v, b))
 //===========================================================================
 // BUFFER TYPES
 //===========================================================================
@@ -92,17 +102,34 @@ typedef const CHAR*           PCSTR;
 //===========================================================================
 // MIN/MAX DEFINITIONS
 //===========================================================================
-#ifndef MIN
-#  define MIN(x, y)        (((x) < (y)) ? (x) : (y))
+#ifndef Min
+#  define Min(x, y)           (((x) < (y)) ? (x) : (y))
 #endif
-#ifndef MAX
-#  define MAX(x, y)        (((x) > (y)) ? (x) : (y))
+#ifndef Max
+#  define Max(x, y)           (((x) > (y)) ? (x) : (y))
+#endif
+#ifndef Clamp
+#  define Clamp(x, min, max)  (Min(Max((x), (min)), (max)))
+#endif
+#ifndef Map
+#  define Map(x, imin, imax, omin, omax)                                   \
+      (((x) - (imin)) * ((omax) - (omin)) / ((imax) - (imin)) + (omin))
+#endif
+#ifndef MapClamp
+#  define MapClamp(x, imin, imax, omin, omax)                              \
+      Map(Clamp(x, imin, imax), imin, imax, omin, omax)
 #endif
 //===========================================================================
 // MEMORY OPERATIONS
 //===========================================================================
 #ifndef memzero
 #  define memzero(pv, cb)     memset((pv), 0, (cb))
+#endif
+//===========================================================================
+// COMPILER OPTIONS
+//===========================================================================
+#ifndef IgnoreParam
+#  define IgnoreParam(p)      (void)(p)
 #endif
 //===========================================================================
 // AVR PINS
@@ -246,6 +273,30 @@ static __attribute__((unused)) volatile uint8_t* __ppbAvrDO[] = { &PORTB, &PORTC
 #define PinPulseHiLo(p)       PinSetHi(p); PinSetLo(p)
 #define PinPulseLoHi(p)       PinSetLo(p); PinSetHi(p)
 #define PinPulse(p)           PinPulseHiLo(p)
+//===========================================================================
+// AVR CLOCKS
+//===========================================================================
+#define AvrClkCtcTop(ps, freq)    (F_CPU / (ps) / (freq) - 1)
+#define AvrClk0Scale(x) (                                                  \
+   (x == 1) ?    (BitMask(CS00)) :                                         \
+   (x == 8) ?    (BitMask(CS01)) :                                         \
+   (x == 64) ?   (BitMask(CS01) | BitMask(CS00)) :                         \
+   (x == 256) ?  (BitMask(CS02)) :                                         \
+   (x == 1024) ? (BitMask(CS02) | BitMask(CS00)) : 0)
+#define AvrClk1Scale(x) (                                                  \
+   (x == 1) ?    (BitMask(CS10)) :                                         \
+   (x == 8) ?    (BitMask(CS11)) :                                         \
+   (x == 64) ?   (BitMask(CS11) | BitMask(CS10)) :                         \
+   (x == 256) ?  (BitMask(CS12)) :                                         \
+   (x == 1024) ? (BitMask(CS12) | BitMask(CS10)) : 0)
+#define AvrClk2Scale(x) (                                                  \
+   (x == 1) ?    (BitMask(CS20)) :                                         \
+   (x == 8) ?    (BitMask(CS21)) :                                         \
+   (x == 32) ?   (BitMask(CS21) | BitMask(CS20)) :                         \
+   (x == 64) ?   (BitMask(CS22)) :                                         \
+   (x == 128) ?  (BitMask(CS22) | BitMask(CS20)) :                         \
+   (x == 256) ?  (BitMask(CS22) | BitMask(CS21)) :                         \
+   (x == 1024) ? (BitMask(CS22) | BitMask(CS21) | BitMask(CS20)) : 0)
 //===========================================================================
 // AVR OPERATIONS
 //===========================================================================
